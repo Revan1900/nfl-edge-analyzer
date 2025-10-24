@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export const Footer = () => {
   return (
     <footer className="bg-primary text-primary-foreground mt-16">
@@ -21,9 +23,16 @@ export const Footer = () => {
           </div>
           
           <div className="flex gap-6 text-xs">
-            <a href="#" className="hover:text-secondary transition-colors">About</a>
-            <a href="#" className="hover:text-secondary transition-colors">Disclaimers</a>
-            <a href="#" className="hover:text-secondary transition-colors">Responsible Gaming</a>
+            <Link to="/about" className="hover:text-secondary transition-colors">About</Link>
+            <Link to="/historical" className="hover:text-secondary transition-colors">Performance</Link>
+            <a 
+              href="https://www.ncpgambling.org" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-secondary transition-colors"
+            >
+              Responsible Gaming
+            </a>
           </div>
         </div>
       </div>

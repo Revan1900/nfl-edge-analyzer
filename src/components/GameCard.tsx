@@ -1,8 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface GameCardProps {
+  id: string;
   homeTeam: string;
   awayTeam: string;
   homeProb: number;
@@ -15,6 +17,7 @@ interface GameCardProps {
 }
 
 export const GameCard = ({
+  id,
   homeTeam,
   awayTeam,
   homeProb,
@@ -25,10 +28,14 @@ export const GameCard = ({
   kickoff,
   confidence,
 }: GameCardProps) => {
+  const navigate = useNavigate();
   const hasEdge = edge >= 3;
   
   return (
-    <Card className="p-6 hover:shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer border-border">
+    <Card 
+      className="p-6 hover:shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer border-border"
+      onClick={() => navigate(`/game/${id}`)}
+    >
       <div className="space-y-4">
         {/* Teams and Probabilities */}
         <div className="flex justify-between items-start">

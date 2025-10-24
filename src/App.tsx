@@ -8,6 +8,11 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import GameDetail from "./pages/GameDetail";
+import Historical from "./pages/Historical";
+import Account from "./pages/Account";
+import Selections from "./pages/Selections";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +28,25 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/" element={<Index />} />
+            <Route path="/game/:gameId" element={<GameDetail />} />
+            <Route path="/historical" element={<Historical />} />
+            <Route path="/about" element={<About />} />
+            <Route 
+              path="/account" 
+              element={
+                <ProtectedRoute>
+                  <Account />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/selections" 
+              element={
+                <ProtectedRoute>
+                  <Selections />
+                </ProtectedRoute>
+              } 
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
