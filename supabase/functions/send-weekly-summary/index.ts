@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@4.0.0";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 import { generateWeeklySummaryEmail } from "../_shared/email-templates.ts";
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
@@ -105,11 +105,14 @@ serve(async (req) => {
             console.error(`Failed to fetch predictions:`, predictionsError);
           }
 
-          const topEdges = (predictions || []).map(p => ({
-            game: `${p.games?.away_team || 'TBD'} @ ${p.games?.home_team || 'TBD'}`,
-            edge: p.edge_vs_implied || 0,
-            market: p.market_type || 'Spread'
-          }));
+          const topEdges = (predictions || []).map(p => {
+            const game = Array.isArray(p.games) ? p.games[0] : p.games;
+            return {
+              game: `${game?.away_team || 'TBD'} @ ${game?.home_team || 'TBD'}`,
+              edge: p.edge_vs_implied || 0,
+              market: p.market_type || 'Spread'
+            };
+          });
 
           // Calculate accuracy (placeholder - would need actual results data)
           const accuracy = 65.5;

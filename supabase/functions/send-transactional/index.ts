@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@4.0.0";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 import { generateWelcomeEmail } from "../_shared/email-templates.ts";
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
@@ -49,7 +49,7 @@ serve(async (req) => {
     }
 
     // Send email via Resend
-    const result = await resend.emails.send({
+    const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'NFL Analytics Pro <noreply@dynamicaihub.com>',
       to: email,
       subject: emailContent.subject,
@@ -57,7 +57,11 @@ serve(async (req) => {
       text: emailContent.text,
     });
 
-    console.log('Email sent successfully:', result);
+    if (emailError) {
+      throw emailError;
+    }
+
+    console.log('Email sent successfully:', emailData);
 
     // Log to audit if user_id provided
     if (user_id) {
@@ -67,7 +71,7 @@ serve(async (req) => {
         metadata: { 
           type: type,
           status: 'success',
-          email_id: result.id
+          email_id: emailData?.id
         }
       });
     }
@@ -76,7 +80,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true,
         message: `${type} email sent successfully`,
-        email_id: result.id
+        email_id: emailData?.id
       }),
       { 
         status: 200, 
