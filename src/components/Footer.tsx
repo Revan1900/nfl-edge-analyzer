@@ -25,6 +25,8 @@ export const Footer = () => {
           <div className="flex gap-6 text-xs">
             <Link to="/about" className="hover:text-secondary transition-colors">About</Link>
             <Link to="/historical" className="hover:text-secondary transition-colors">Performance</Link>
+            <Link to="/terms" className="hover:text-secondary transition-colors">Terms</Link>
+            <Link to="/privacy" className="hover:text-secondary transition-colors">Privacy</Link>
             <a 
               href="https://www.ncpgambling.org" 
               target="_blank" 

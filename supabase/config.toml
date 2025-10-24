@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.alert-monitor]
 verify_jwt = false
+
+[functions.export-user-data]
+verify_jwt = false

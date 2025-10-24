@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserSettings, useUpdateUserSettings } from '@/hooks/useUserData';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,12 +12,24 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Settings, Bell } from 'lucide-react';
+import { User, Settings, Bell, Download, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const Account = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: settings, isLoading } = useUserSettings();
   const updateSettings = useUpdateUserSettings();
+  const { toast } = useToast();
   
   const [formData, setFormData] = useState({
     timezone: settings?.timezone || 'America/New_York',
@@ -23,6 +37,34 @@ const Account = () => {
     weeklyEmail: (settings?.notification_prefs as any)?.weekly_email || false,
     gameAlerts: (settings?.notification_prefs as any)?.game_alerts || false,
   });
+
+  const handleExportData = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('export-user-data');
+      if (error) throw error;
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `user-data-${Date.now()}.json`;
+      a.click();
+      
+      toast({ title: 'Data exported successfully' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Export failed', description: 'Please try again' });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await supabase.auth.admin.deleteUser(user!.id);
+      await signOut();
+      toast({ title: 'Account deleted successfully' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Deletion failed' });
+    }
+  };
 
   const handleSaveSettings = () => {
     updateSettings.mutate({
@@ -70,6 +112,10 @@ const Account = () => {
             <TabsTrigger value="notifications">
               <Bell className="mr-2 h-4 w-4" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="privacy">
+              <Download className="mr-2 h-4 w-4" />
+              Privacy
             </TabsTrigger>
           </TabsList>
 
@@ -197,6 +243,56 @@ const Account = () => {
                 <Button onClick={handleSaveSettings} disabled={updateSettings.isPending}>
                   {updateSettings.isPending ? 'Saving...' : 'Save Notifications'}
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="privacy">
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Privacy</CardTitle>
+                <CardDescription>Manage your personal data (GDPR/CCPA)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="font-semibold mb-2">Export Your Data</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Download all your personal data in JSON format
+                  </p>
+                  <Button onClick={handleExportData} variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Data
+                  </Button>
+                </div>
+                
+                <div className="pt-6 border-t">
+                  <h3 className="font-semibold mb-2 text-destructive">Delete Account</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Permanently delete your account and all associated data
+                  </p>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Account
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your account and remove all your data.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive">
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
