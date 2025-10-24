@@ -57,12 +57,26 @@ serve(async (req) => {
     const oddsData: OddsData[] = await oddsResponse.json();
     console.log(`Fetched odds for ${oddsData.length} games`);
 
+    // Helper to calculate NFL week
+    const calculateWeek = (gameDate: Date): number => {
+      const year = gameDate.getFullYear();
+      // NFL season starts first Thursday after Labor Day (first Monday of Sept)
+      const septFirst = new Date(year, 8, 1); // Sept 1
+      const laborDay = new Date(year, 8, 1 + ((8 - septFirst.getDay()) % 7));
+      const seasonStart = new Date(laborDay.getTime() + 3 * 24 * 60 * 60 * 1000);
+      
+      if (gameDate < seasonStart) return 0; // Preseason
+      
+      const diffTime = gameDate.getTime() - seasonStart.getTime();
+      const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000));
+      return Math.min(Math.max(diffWeeks + 1, 1), 18); // Weeks 1-18
+    };
+
     // Process each game
     for (const game of oddsData) {
-      // Extract season and week (simplified - would need actual logic)
       const gameDate = new Date(game.commence_time);
       const season = gameDate.getFullYear();
-      const week = Math.ceil((gameDate.getMonth() + 1) / 4); // Simplified week calculation
+      const week = calculateWeek(gameDate);
 
       // Upsert game
       const { error: gameError } = await supabase

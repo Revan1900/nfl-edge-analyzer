@@ -23,22 +23,36 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch injury data from NFL.com (simplified - would need actual scraping)
-    // For demo purposes, we'll use a mock injury report
-    const mockInjuryData = [
-      {
-        team: 'Kansas City Chiefs',
-        player: 'Patrick Mahomes',
-        position: 'QB',
-        status: 'Questionable',
-        injury: 'Ankle',
-      },
-    ];
+    // Fetch injury data from ESPN API
+    console.log('Fetching injury data from ESPN...');
+    const espnResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries');
+    
+    if (!espnResponse.ok) {
+      throw new Error(`ESPN API error: ${espnResponse.status}`);
+    }
 
-    console.log('Processing injury data...');
+    const espnData = await espnResponse.json();
+    const injuryData = [];
 
-    // Use OpenAI to normalize and extract structured data
-    for (const injury of mockInjuryData) {
+    // Parse ESPN injury data structure
+    for (const teamData of espnData.injuries || []) {
+      const teamName = teamData.team?.displayName || 'Unknown Team';
+      
+      for (const injury of teamData.injuries || []) {
+        injuryData.push({
+          team: teamName,
+          player: injury.athlete?.displayName || 'Unknown',
+          position: injury.athlete?.position?.abbreviation || 'N/A',
+          status: injury.status || 'Unknown',
+          injury: injury.details?.type || 'Unknown',
+        });
+      }
+    }
+
+    console.log(`Processing ${injuryData.length} injuries...`);
+
+    // Use OpenAI to normalize and extract structured data with retry logic
+    for (const injury of injuryData) {
       const prompt = `Normalize this injury report and assign a severity score (0-1):
 Player: ${injury.player}
 Position: ${injury.position}
@@ -47,25 +61,37 @@ Injury: ${injury.injury}
 
 Return JSON with: player, position, status, injury_type, severity (0-1), confidence (0-1)`;
 
-      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      // Retry logic for OpenAI
+      let openaiResponse;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${OPENAI_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: 'gpt-5-nano-2025-08-07',
-          messages: [
-            { role: 'system', content: 'You are a sports injury analyst. Return only valid JSON.' },
-            { role: 'user', content: prompt }
-          ],
-          max_completion_tokens: 150,
-        }),
-      });
+          body: JSON.stringify({
+            model: 'gpt-5-nano-2025-08-07',
+            messages: [
+              { role: 'system', content: 'You are a sports injury analyst. Return only valid JSON.' },
+              { role: 'user', content: prompt }
+            ],
+            max_completion_tokens: 150,
+          }),
+        });
 
-      if (!openaiResponse.ok) {
-        console.error('OpenAI API error:', await openaiResponse.text());
-        continue;
+        if (openaiResponse.status === 429) {
+          const retryAfter = parseInt(openaiResponse.headers.get('Retry-After') || '5');
+          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+          continue;
+        }
+
+        if (openaiResponse.ok) break;
+        
+        if (attempt === 2) {
+          console.error('OpenAI API error after retries:', await openaiResponse.text());
+          continue;
+        }
       }
 
       const openaiData = await openaiResponse.json();
@@ -110,7 +136,7 @@ Return JSON with: player, position, status, injury_type, severity (0-1), confide
     return new Response(
       JSON.stringify({ 
         success: true,
-        injuries_processed: mockInjuryData.length,
+        injuries_processed: injuryData.length,
         message: 'Injury ingestion completed successfully'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

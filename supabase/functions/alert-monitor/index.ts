@@ -118,17 +118,51 @@ serve(async (req) => {
       });
     }
 
-    // Log alerts to audit_logs
+    // Send notifications for critical/warning alerts
+    const SLACK_WEBHOOK_URL = Deno.env.get('SLACK_WEBHOOK_URL');
+    
     for (const alert of alerts) {
+      // Log to audit_logs
       await supabase.from('audit_logs').insert({
         action: 'alert_generated',
-        target: alert.type,
-        meta: {
+        target_type: alert.type,
+        metadata: {
           severity: alert.severity,
           message: alert.message,
           details: alert.details,
         },
       });
+
+      // Send to Slack if webhook configured
+      if (SLACK_WEBHOOK_URL && alert.severity !== 'info') {
+        try {
+          await fetch(SLACK_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: `🚨 ${alert.severity.toUpperCase()}: ${alert.message}`,
+              blocks: [
+                {
+                  type: 'section',
+                  text: { 
+                    type: 'mrkdwn', 
+                    text: `*${alert.message}*\nType: ${alert.type}\nSeverity: ${alert.severity}` 
+                  }
+                },
+                {
+                  type: 'section',
+                  text: { 
+                    type: 'mrkdwn', 
+                    text: `\`\`\`${JSON.stringify(alert.details, null, 2)}\`\`\`` 
+                  }
+                }
+              ]
+            })
+          });
+        } catch (slackError) {
+          console.error('Failed to send Slack notification:', slackError);
+        }
+      }
     }
 
     console.log(`Alert monitor completed. Generated ${alerts.length} alerts.`);

@@ -133,34 +133,52 @@ Market Consensus:
 Be professional, data-driven, and avoid hype. Mention specific numbers and percentages.`;
 
       try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: hoursToKickoff < 6 ? 'gpt-5-2025-08-07' : 'gpt-5-mini-2025-08-07',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: context }
-            ],
-            max_completion_tokens: 300,
-          }),
-        });
+        // Retry logic with exponential backoff
+        let response;
+        let lastError;
+        
+        for (let attempt = 0; attempt < 3; attempt++) {
+          response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: hoursToKickoff < 6 ? 'gpt-5-2025-08-07' : 'gpt-5-mini-2025-08-07',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: context }
+              ],
+              max_completion_tokens: 300,
+            }),
+          });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('OpenAI API error:', response.status, errorText);
-          
-          // Handle rate limiting
           if (response.status === 429) {
-            console.log('Rate limited, entering economy mode');
-            tokenBudgetUsed = MAX_DAILY_TOKENS; // Force economy mode
+            const retryAfter = parseInt(response.headers.get('Retry-After') || '5');
+            const backoff = Math.min(retryAfter * 1000, 2 ** attempt * 1000);
+            console.log(`Rate limited. Retrying in ${backoff}ms (attempt ${attempt + 1}/3)...`);
+            await new Promise(resolve => setTimeout(resolve, backoff));
+            
+            if (attempt === 2) {
+              console.log('Max retries reached, entering economy mode');
+              tokenBudgetUsed = MAX_DAILY_TOKENS;
+              continue;
+            }
             continue;
           }
+
+          if (response.ok) break;
           
-          throw new Error(`OpenAI API error: ${response.status}`);
+          lastError = await response.text();
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 2 ** attempt * 1000));
+          }
+        }
+
+        if (!response || !response.ok) {
+          console.error('OpenAI API error after retries:', response?.status, lastError);
+          continue;
         }
 
         const data = await response.json();
