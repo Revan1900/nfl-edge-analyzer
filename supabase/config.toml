@@ -29,3 +29,12 @@ verify_jwt = false
 
 [functions.orchestrator]
 verify_jwt = false
+
+[functions.generate-pdf]
+verify_jwt = false
+
+[functions.generate-tts]
+verify_jwt = false
+
+[functions.alert-monitor]
+verify_jwt = false

@@ -1,7 +1,9 @@
-import { Trophy, User, LogOut } from "lucide-react";
+import { Trophy, User, LogOut, Shield, Activity } from "lucide-react";
 import { RefreshCountdown } from "./RefreshCountdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -15,6 +17,29 @@ import {
 export const Header = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      checkAdminStatus();
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
+
+  const checkAdminStatus = async () => {
+    if (!user) return;
+
+    try {
+      const { data } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin',
+      });
+      setIsAdmin(data || false);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
 
   return (
     <header className="bg-gradient-primary text-primary-foreground shadow-elevated sticky top-0 z-50">
@@ -47,6 +72,19 @@ export const Header = () => {
                   <DropdownMenuItem onClick={() => navigate('/selections')}>
                     My Selections
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                        <Activity className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut}>
                     <LogOut className="mr-2 h-4 w-4" />
