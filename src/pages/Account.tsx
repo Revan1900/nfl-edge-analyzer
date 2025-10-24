@@ -10,9 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Settings, Bell, Download, Trash2 } from 'lucide-react';
+import { User, Settings, Bell, Download, Trash2, AlertTriangle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -210,9 +212,9 @@ const Account = () => {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="weeklyEmail">Weekly Summary Email</Label>
+                    <Label htmlFor="weeklyEmail">Weekly Email Summary</Label>
                     <p className="text-sm text-muted-foreground">
-                      Receive a weekly summary of predictions and results
+                      Receive weekly performance summaries every Monday
                     </p>
                   </div>
                   <Switch
@@ -224,11 +226,13 @@ const Account = () => {
                   />
                 </div>
 
+                <Separator />
+
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="gameAlerts">Game Alerts</Label>
+                    <Label htmlFor="gameAlerts">High-Value Game Alerts</Label>
                     <p className="text-sm text-muted-foreground">
-                      Get notified about games with high-value edges
+                      Get notified of games with significant edges (≥5%)
                     </p>
                   </div>
                   <Switch
@@ -239,6 +243,32 @@ const Account = () => {
                     }
                   />
                 </div>
+
+                {(formData.weeklyEmail || formData.gameAlerts) && (
+                  <>
+                    <Separator />
+                    <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                      <h4 className="font-semibold text-sm">Email Delivery Status</h4>
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        <p className="flex items-center gap-2">
+                          <span className="text-primary">✓</span> 
+                          Email verified: {user?.email}
+                        </p>
+                        <p className="text-xs mt-2">
+                          Emails sent from: noreply@dynamicaihub.com
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        Disabling emails will stop all automated notifications. 
+                        You can re-enable anytime.
+                      </AlertDescription>
+                    </Alert>
+                  </>
+                )}
 
                 <Button onClick={handleSaveSettings} disabled={updateSettings.isPending}>
                   {updateSettings.isPending ? 'Saving...' : 'Save Notifications'}

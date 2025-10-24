@@ -29,8 +29,10 @@ serve(async (req) => {
       );
     }
 
+    const supabase_url = Deno.env.get('SUPABASE_URL') ?? '';
+    
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
+      supabase_url,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } }
     );
@@ -51,6 +53,33 @@ serve(async (req) => {
         JSON.stringify({ error: error.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Send welcome email after successful registration
+    if (data.user) {
+      try {
+        const sendEmailResponse = await fetch(`${supabase_url}/functions/v1/send-transactional`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+          },
+          body: JSON.stringify({
+            type: 'welcome',
+            user_id: data.user.id,
+            email: email
+          })
+        });
+
+        if (!sendEmailResponse.ok) {
+          console.error('Failed to send welcome email:', await sendEmailResponse.text());
+        } else {
+          console.log('Welcome email sent successfully');
+        }
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // Don't fail registration if email fails
+      }
     }
 
     return new Response(

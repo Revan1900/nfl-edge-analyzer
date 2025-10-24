@@ -223,6 +223,54 @@ serve(async (req) => {
       await logStep('generate-narratives', 'error', { error: errorMsg });
     }
 
+    // Step 8: Send game alerts for high-value edges
+    console.log('Step 8: Checking for high-value game alerts...');
+    try {
+      const { data: highEdgeGames, error: edgeError } = await supabase
+        .from('predictions')
+        .select('game_id, edge_vs_implied')
+        .gte('edge_vs_implied', 5)
+        .order('edge_vs_implied', { ascending: false })
+        .limit(10);
+
+      if (edgeError) {
+        console.error('Error fetching high-edge games:', edgeError);
+        await logStep('game-alerts', 'error', { error: edgeError.message });
+      } else if (highEdgeGames && highEdgeGames.length > 0) {
+        console.log(`Found ${highEdgeGames.length} high-value games, sending alerts...`);
+        
+        let alertsSent = 0;
+        for (const game of highEdgeGames) {
+          try {
+            const alertResponse = await fetch(`${baseUrl}/functions/v1/send-game-alert`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${serviceKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ 
+                game_id: game.game_id, 
+                edge: game.edge_vs_implied 
+              })
+            });
+            
+            if (alertResponse.ok) alertsSent++;
+          } catch (alertError) {
+            console.error(`Failed to send alert for game ${game.game_id}:`, alertError);
+          }
+        }
+        
+        await logStep('game-alerts', 'success', { alerts_sent: alertsSent });
+      } else {
+        console.log('No high-value edges found for alerts');
+        await logStep('game-alerts', 'success', { alerts_sent: 0 });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Step 8 failed:', errorMsg);
+      await logStep('game-alerts', 'error', { error: errorMsg });
+    }
+
     console.log('Orchestrator pipeline completed');
 
     const hasSuccess = Object.values(results).some(r => r.success);
