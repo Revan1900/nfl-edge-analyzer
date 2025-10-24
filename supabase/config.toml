@@ -1,1 +1,16 @@
 project_id = "erqbocersgeghtjadkvw"
+
+[functions.auth-register]
+verify_jwt = false
+
+[functions.auth-login]
+verify_jwt = false
+
+[functions.ingest-odds]
+verify_jwt = false
+
+[functions.ingest-injuries]
+verify_jwt = false
+
+[functions.ingest-weather]
+verify_jwt = false
