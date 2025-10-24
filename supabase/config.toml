@@ -14,3 +14,18 @@ verify_jwt = false
 
 [functions.ingest-weather]
 verify_jwt = false
+
+[functions.build-features]
+verify_jwt = false
+
+[functions.generate-predictions]
+verify_jwt = false
+
+[functions.calibrate-model]
+verify_jwt = false
+
+[functions.generate-narratives]
+verify_jwt = false
+
+[functions.orchestrator]
+verify_jwt = false
