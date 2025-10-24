@@ -63,13 +63,15 @@ Return JSON with: player, position, status, injury_type, severity (0-1), confide
 
       // Retry logic for OpenAI
       let openaiResponse;
+      let lastError = '';
+      
       for (let attempt = 0; attempt < 3; attempt++) {
         openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
             model: 'gpt-5-nano-2025-08-07',
             messages: [
@@ -88,10 +90,16 @@ Return JSON with: player, position, status, injury_type, severity (0-1), confide
 
         if (openaiResponse.ok) break;
         
+        lastError = await openaiResponse.text();
         if (attempt === 2) {
-          console.error('OpenAI API error after retries:', await openaiResponse.text());
+          console.error('OpenAI API error after retries:', lastError);
           continue;
         }
+      }
+
+      if (!openaiResponse || !openaiResponse.ok) {
+        console.error('Failed to normalize injury:', lastError);
+        continue;
       }
 
       const openaiData = await openaiResponse.json();

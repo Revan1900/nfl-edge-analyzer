@@ -41,6 +41,36 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_execution_log: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          job_name: string
+          metadata: Json | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_name: string
+          metadata?: Json | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_name?: string
+          metadata?: Json | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       evaluations: {
         Row: {
           actual_value: number | null
@@ -520,6 +550,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      trigger_edge_function: {
+        Args: { function_name: string }
+        Returns: undefined
       }
     }
     Enums: {

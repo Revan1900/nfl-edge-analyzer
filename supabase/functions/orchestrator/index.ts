@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +18,7 @@ serve(async (req) => {
 
     const supabase = createClient(baseUrl, serviceKey);
 
-    const results = {
+    const results: Record<string, { success: boolean; error: string | null; count: number }> = {
       odds: { success: false, error: null, count: 0 },
       injuries: { success: false, error: null, count: 0 },
       weather: { success: false, error: null, count: 0 },
@@ -57,8 +58,9 @@ serve(async (req) => {
         await logStep('ingest-odds', 'error', { error: errorText });
       }
     } catch (error) {
-      results.odds = { success: false, error: error.message, count: 0 };
-      await logStep('ingest-odds', 'error', { error: error.message });
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      results.odds = { success: false, error: errorMsg, count: 0 };
+      await logStep('ingest-odds', 'error', { error: errorMsg });
     }
 
     // Step 2: Ingest injuries
@@ -82,8 +84,9 @@ serve(async (req) => {
         await logStep('ingest-injuries', 'error', { error: errorText });
       }
     } catch (error) {
-      results.injuries = { success: false, error: error.message, count: 0 };
-      await logStep('ingest-injuries', 'error', { error: error.message });
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      results.injuries = { success: false, error: errorMsg, count: 0 };
+      await logStep('ingest-injuries', 'error', { error: errorMsg });
     }
 
     // Step 3: Ingest weather
@@ -107,8 +110,9 @@ serve(async (req) => {
         await logStep('ingest-weather', 'error', { error: errorText });
       }
     } catch (error) {
-      results.weather = { success: false, error: error.message, count: 0 };
-      await logStep('ingest-weather', 'error', { error: error.message });
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      results.weather = { success: false, error: errorMsg, count: 0 };
+      await logStep('ingest-weather', 'error', { error: errorMsg });
     }
 
     // Step 4: Build features
@@ -131,8 +135,9 @@ serve(async (req) => {
         await logStep('build-features', 'error', { error: errorText });
       }
     } catch (error) {
-      results.features = { success: false, error: error.message, count: 0 };
-      await logStep('build-features', 'error', { error: error.message });
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      results.features = { success: false, error: errorMsg, count: 0 };
+      await logStep('build-features', 'error', { error: errorMsg });
     }
 
     // Step 5: Generate predictions
@@ -155,8 +160,9 @@ serve(async (req) => {
         await logStep('generate-predictions', 'error', { error: errorText });
       }
     } catch (error) {
-      results.predictions = { success: false, error: error.message, count: 0 };
-      await logStep('generate-predictions', 'error', { error: error.message });
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      results.predictions = { success: false, error: errorMsg, count: 0 };
+      await logStep('generate-predictions', 'error', { error: errorMsg });
     }
 
     // Step 6: Calibrate model (on completed games)
@@ -179,8 +185,9 @@ serve(async (req) => {
         await logStep('calibrate-model', 'error', { error: errorText });
       }
     } catch (error) {
-      results.calibration = { success: false, error: error.message, count: 0 };
-      await logStep('calibrate-model', 'error', { error: error.message });
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      results.calibration = { success: false, error: errorMsg, count: 0 };
+      await logStep('calibrate-model', 'error', { error: errorMsg });
     }
 
     // Step 7: Generate narratives
@@ -211,8 +218,9 @@ serve(async (req) => {
         await logStep('generate-narratives', 'error', { error: errorText });
       }
     } catch (error) {
-      results.narratives = { success: false, error: error.message, count: 0 };
-      await logStep('generate-narratives', 'error', { error: error.message });
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      results.narratives = { success: false, error: errorMsg, count: 0 };
+      await logStep('generate-narratives', 'error', { error: errorMsg });
     }
 
     console.log('Orchestrator pipeline completed');
