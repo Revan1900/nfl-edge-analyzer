@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateAuthInput, sanitizeEmail, checkRateLimit, getClientIp } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,17 +15,20 @@ serve(async (req) => {
   try {
     const { email, password } = await req.json();
     
-    // Validate input
-    if (!email || !password) {
+    // Rate limiting
+    const clientIp = getClientIp(req);
+    if (!checkRateLimit(clientIp, 3, 60000)) {
       return new Response(
-        JSON.stringify({ error: 'Email and password are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Too many attempts. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    if (password.length < 8) {
+    
+    // Input validation
+    const validation = validateAuthInput(email, password);
+    if (!validation.valid) {
       return new Response(
-        JSON.stringify({ error: 'Password must be at least 8 characters' }),
+        JSON.stringify({ error: validation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -38,9 +42,10 @@ serve(async (req) => {
     );
 
     const redirectUrl = `${req.headers.get('origin')}/verify-email`;
+    const sanitizedEmail = sanitizeEmail(email);
     
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: sanitizedEmail,
       password,
       options: {
         emailRedirectTo: redirectUrl,
@@ -48,9 +53,9 @@ serve(async (req) => {
     });
 
     if (error) {
-      console.error('Registration error:', error);
+      console.error('Registration failed');
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: 'Registration failed' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -72,12 +77,10 @@ serve(async (req) => {
         });
 
         if (!sendEmailResponse.ok) {
-          console.error('Failed to send welcome email:', await sendEmailResponse.text());
-        } else {
-          console.log('Welcome email sent successfully');
+          console.error('Failed to send welcome email');
         }
       } catch (emailError) {
-        console.error('Error sending welcome email:', emailError);
+        console.error('Error sending welcome email');
         // Don't fail registration if email fails
       }
     }
@@ -90,9 +93,9 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('Request processing failed');
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Request processing failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

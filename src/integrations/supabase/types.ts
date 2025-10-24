@@ -275,9 +275,12 @@ export type Database = {
         Row: {
           confidence: number
           created_at: string
+          edge_vs_implied: number | null
           game_id: string
           id: string
+          implied_probability: number | null
           market_type: string
+          model_probability: number | null
           model_version: string | null
           predicted_at: string
           predicted_value: number
@@ -287,9 +290,12 @@ export type Database = {
         Insert: {
           confidence: number
           created_at?: string
+          edge_vs_implied?: number | null
           game_id: string
           id?: string
+          implied_probability?: number | null
           market_type: string
+          model_probability?: number | null
           model_version?: string | null
           predicted_at?: string
           predicted_value: number
@@ -299,9 +305,12 @@ export type Database = {
         Update: {
           confidence?: number
           created_at?: string
+          edge_vs_implied?: number | null
           game_id?: string
           id?: string
+          implied_probability?: number | null
           market_type?: string
+          model_probability?: number | null
           model_version?: string | null
           predicted_at?: string
           predicted_value?: number
