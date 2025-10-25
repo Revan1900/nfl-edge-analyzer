@@ -22,6 +22,9 @@ export interface Prediction {
   confidence: number;
   uncertainty_band: any;
   predicted_at: string;
+  model_probability?: number | null;
+  implied_probability?: number | null;
+  edge_vs_implied?: number | null;
 }
 
 export interface OddsSnapshot {

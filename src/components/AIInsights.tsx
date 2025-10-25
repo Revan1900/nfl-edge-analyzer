@@ -20,7 +20,19 @@ export const AIInsights = ({ gameId, homeTeam, awayTeam }: AIInsightsProps) => {
   const fetchInsights = async () => {
     setLoading(true);
     try {
-      // Fetch real data from Supabase
+      // Trigger live data ingestion first
+      toast({
+        title: 'Fetching Live Data',
+        description: 'Pulling latest injuries, weather, and odds...',
+      });
+
+      // Call orchestrator to refresh all data
+      await supabase.functions.invoke('orchestrator');
+      
+      // Wait a moment for data to populate
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Now fetch the updated data from Supabase
       const { data: signals } = await supabase
         .from('signals')
         .select('*')

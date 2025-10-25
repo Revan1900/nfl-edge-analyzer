@@ -103,7 +103,24 @@ Return JSON with: player, position, status, injury_type, severity (0-1), confide
       }
 
       const openaiData = await openaiResponse.json();
-      const normalizedData = JSON.parse(openaiData.choices[0].message.content);
+      let normalizedData;
+      try {
+        const content = openaiData.choices[0].message.content.trim();
+        // Remove markdown code blocks if present
+        const jsonContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        normalizedData = JSON.parse(jsonContent);
+      } catch (parseError) {
+        console.error('Failed to parse OpenAI response:', openaiData.choices[0].message.content);
+        // Use fallback data
+        normalizedData = {
+          player: injury.player,
+          position: injury.position,
+          status: injury.status,
+          injury_type: injury.injury,
+          severity: 0.5,
+          confidence: 0.5
+        };
+      }
 
       // Find games for this team
       const { data: games } = await supabase

@@ -228,25 +228,84 @@ const GameDetail = () => {
           <TabsContent value="odds">
             <Card>
               <CardHeader>
-                <CardTitle>Latest Odds</CardTitle>
+                <CardTitle>Latest Odds & Markets</CardTitle>
               </CardHeader>
               <CardContent>
                 {latestOdds.length > 0 ? (
-                  <div className="space-y-4">
-                    {latestOdds.map((odds, idx) => (
-                      <div key={odds.id} className="flex justify-between items-center border-b pb-2">
-                        <span className="font-medium">{odds.bookmaker}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {odds.market_type}
-                        </span>
-                        <span className="text-sm">
-                          {new Date(odds.snapshot_time).toLocaleTimeString()}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="space-y-6">
+                    {latestOdds.map((odds) => {
+                      const oddsData = odds.odds_data as any;
+                      return (
+                        <div key={odds.id} className="border rounded-lg p-4">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="font-semibold text-lg">{odds.bookmaker}</span>
+                            <Badge variant="outline">
+                              {new Date(odds.snapshot_time).toLocaleTimeString()}
+                            </Badge>
+                          </div>
+                          
+                          {odds.market_type === 'h2h' && oddsData && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-sm text-muted-foreground">Home ({game.home_team})</p>
+                                <p className="text-xl font-bold">
+                                  {oddsData.home > 0 ? '+' : ''}{oddsData.home}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {((oddsData.home < 0 ? Math.abs(oddsData.home) / (Math.abs(oddsData.home) + 100) : 100 / (oddsData.home + 100)) * 100).toFixed(1)}% implied
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-sm text-muted-foreground">Away ({game.away_team})</p>
+                                <p className="text-xl font-bold">
+                                  {oddsData.away > 0 ? '+' : ''}{oddsData.away}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {((oddsData.away < 0 ? Math.abs(oddsData.away) / (Math.abs(oddsData.away) + 100) : 100 / (oddsData.away + 100)) * 100).toFixed(1)}% implied
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {odds.market_type === 'spreads' && oddsData && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-sm text-muted-foreground">Home Spread</p>
+                                <p className="text-xl font-bold">
+                                  {oddsData.home_point > 0 ? '+' : ''}{oddsData.home_point} ({oddsData.home_price})
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-sm text-muted-foreground">Away Spread</p>
+                                <p className="text-xl font-bold">
+                                  {oddsData.away_point > 0 ? '+' : ''}{oddsData.away_point} ({oddsData.away_price})
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {odds.market_type === 'totals' && oddsData && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-sm text-muted-foreground">Over</p>
+                                <p className="text-xl font-bold">
+                                  {oddsData.point} ({oddsData.over_price})
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-sm text-muted-foreground">Under</p>
+                                <p className="text-xl font-bold">
+                                  {oddsData.point} ({oddsData.under_price})
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">No odds data available</p>
+                  <p className="text-muted-foreground">No odds data available yet. Run the orchestrator to fetch latest odds.</p>
                 )}
               </CardContent>
             </Card>
@@ -257,31 +316,121 @@ const GameDetail = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5" />
-                  Key Factors
+                  Key Factors Analysis
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Home Field Advantage</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Model accounts for historical home field advantage at {game.venue}
-                    </p>
+                <div className="space-y-6">
+                  {/* Home Field Advantage */}
+                  <div className="border-b pb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold mb-1">Home Field Advantage</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {game.home_team} playing at {game.venue || 'home stadium'}. Historical data shows home teams win approximately 55% of games. Model adjusts predictions accordingly.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  {injuries.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Injury Impact</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {injuries.length} reported injuries affecting prediction confidence
-                      </p>
+
+                  {/* Spread and Consensus */}
+                  {spreadPrediction && (
+                    <div className="border-b pb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-secondary/10 rounded-lg">
+                          <TrendingUp className="h-5 w-5 text-secondary" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">Market Consensus</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Current consensus spread of {spreadPrediction.predicted_value.toFixed(1)} points. 
+                            {mlPrediction?.edge_vs_implied && Math.abs(mlPrediction.edge_vs_implied) > 0.5 ? (
+                              ` Model identifies ${mlPrediction.edge_vs_implied > 0 ? 'value on home team' : 'value on away team'} with ${Math.abs(mlPrediction.edge_vs_implied).toFixed(1)}% edge over implied probability.`
+                            ) : (
+                              ' Market odds align with model expectations.'
+                            )}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
-                  {weather && weather.content.severity > 0.3 && (
+
+                  {/* Injury Impact */}
+                  {injuries.length > 0 && (
+                    <div className="border-b pb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-destructive/10 rounded-lg">
+                          <AlertCircle className="h-5 w-5 text-destructive" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">Injury Impact</h4>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {injuries.length} reported injuries may affect team performance and game outcome.
+                          </p>
+                          <div className="space-y-1">
+                            {injuries.slice(0, 3).map((injury) => (
+                              <div key={injury.id} className="text-xs flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {injury.content.status}
+                                </Badge>
+                                <span className="text-muted-foreground">
+                                  {injury.content.player} ({injury.content.position})
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {injuries.length > 3 && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              +{injuries.length - 3} more injuries
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Weather Impact */}
+                  {weather && weather.content.severity > 0.2 && (
+                    <div className="border-b pb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-accent/10 rounded-lg">
+                          <Cloud className="h-5 w-5 text-accent" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">Weather Conditions</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {weather.content.severity > 0.5 ? 'Significant' : 'Moderate'} weather impact expected. 
+                            Temperature of {weather.content.temperature}°F with {weather.content.windspeed} mph winds 
+                            {weather.content.precipitation > 0 ? ` and ${weather.content.precipitation}" precipitation` : ''}.
+                            May affect passing game and scoring.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Model Confidence */}
+                  {mlPrediction && (
                     <div>
-                      <h4 className="font-semibold mb-2">Weather Impact</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Adverse weather conditions may impact scoring and play style
-                      </p>
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Activity className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">Model Confidence</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Prediction confidence at {(mlPrediction.confidence * 100).toFixed(0)}%. 
+                            {mlPrediction.confidence > 0.75 
+                              ? ' High confidence based on comprehensive data analysis.' 
+                              : mlPrediction.confidence > 0.6 
+                                ? ' Moderate confidence - monitor for line movement.' 
+                                : ' Lower confidence suggests uncertain outcome or close matchup.'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
