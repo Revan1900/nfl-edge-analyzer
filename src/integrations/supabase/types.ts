@@ -416,6 +416,54 @@ export type Database = {
         }
         Relationships: []
       }
+      team_stats: {
+        Row: {
+          conference_record: string | null
+          division_record: string | null
+          id: string
+          last_5_games: string | null
+          losses: number | null
+          points_against: number | null
+          points_for: number | null
+          season: number
+          streak: string | null
+          team_name: string
+          ties: number | null
+          updated_at: string
+          wins: number | null
+        }
+        Insert: {
+          conference_record?: string | null
+          division_record?: string | null
+          id?: string
+          last_5_games?: string | null
+          losses?: number | null
+          points_against?: number | null
+          points_for?: number | null
+          season: number
+          streak?: string | null
+          team_name: string
+          ties?: number | null
+          updated_at?: string
+          wins?: number | null
+        }
+        Update: {
+          conference_record?: string | null
+          division_record?: string | null
+          id?: string
+          last_5_games?: string | null
+          losses?: number | null
+          points_against?: number | null
+          points_for?: number | null
+          season?: number
+          streak?: string | null
+          team_name?: string
+          ties?: number | null
+          updated_at?: string
+          wins?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

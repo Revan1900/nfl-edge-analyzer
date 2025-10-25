@@ -20,6 +20,7 @@ serve(async (req) => {
 
     const results: Record<string, { success: boolean; error: string | null; count: number }> = {
       odds: { success: false, error: null, count: 0 },
+      teamStats: { success: false, error: null, count: 0 },
       injuries: { success: false, error: null, count: 0 },
       weather: { success: false, error: null, count: 0 },
       features: { success: false, error: null, count: 0 },
@@ -63,8 +64,34 @@ serve(async (req) => {
       await logStep('ingest-odds', 'error', { error: errorMsg });
     }
 
-    // Step 2: Ingest injuries
-    console.log('Step 2: Ingesting injuries...');
+    // Step 2: Update team stats
+    console.log('Step 2: Updating team stats...');
+    try {
+      const teamStatsResponse = await fetch(`${baseUrl}/functions/v1/update-team-stats`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (teamStatsResponse.ok) {
+        const teamStatsData = await teamStatsResponse.json();
+        results.teamStats = { success: true, error: null, count: teamStatsData.teams_updated || 0 };
+        await logStep('update-team-stats', 'success', { count: teamStatsData.teams_updated });
+      } else {
+        const errorText = await teamStatsResponse.text();
+        results.teamStats = { success: false, error: errorText, count: 0 };
+        await logStep('update-team-stats', 'error', { error: errorText });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      results.teamStats = { success: false, error: errorMsg, count: 0 };
+      await logStep('update-team-stats', 'error', { error: errorMsg });
+    }
+
+    // Step 3: Ingest injuries
+    console.log('Step 3: Ingesting injuries...');
     try {
       const injuriesResponse = await fetch(`${baseUrl}/functions/v1/ingest-injuries`, {
         method: 'POST',
@@ -89,8 +116,8 @@ serve(async (req) => {
       await logStep('ingest-injuries', 'error', { error: errorMsg });
     }
 
-    // Step 3: Ingest weather
-    console.log('Step 3: Ingesting weather...');
+    // Step 4: Ingest weather
+    console.log('Step 4: Ingesting weather...');
     try {
       const weatherResponse = await fetch(`${baseUrl}/functions/v1/ingest-weather`, {
         method: 'POST',
@@ -115,8 +142,8 @@ serve(async (req) => {
       await logStep('ingest-weather', 'error', { error: errorMsg });
     }
 
-    // Step 4: Build features
-    console.log('Step 4: Building features...');
+    // Step 5: Build features
+    console.log('Step 5: Building features...');
     try {
       const featuresResponse = await fetch(`${baseUrl}/functions/v1/build-features`, {
         method: 'POST',
@@ -140,8 +167,8 @@ serve(async (req) => {
       await logStep('build-features', 'error', { error: errorMsg });
     }
 
-    // Step 5: Generate predictions
-    console.log('Step 5: Generating predictions...');
+    // Step 6: Generate predictions
+    console.log('Step 6: Generating predictions...');
     try {
       const predictionsResponse = await fetch(`${baseUrl}/functions/v1/generate-predictions`, {
         method: 'POST',
@@ -165,8 +192,8 @@ serve(async (req) => {
       await logStep('generate-predictions', 'error', { error: errorMsg });
     }
 
-    // Step 6: Calibrate model (on completed games)
-    console.log('Step 6: Calibrating model...');
+    // Step 7: Calibrate model (on completed games)
+    console.log('Step 7: Calibrating model...');
     try {
       const calibrateResponse = await fetch(`${baseUrl}/functions/v1/calibrate-model`, {
         method: 'POST',
@@ -190,8 +217,8 @@ serve(async (req) => {
       await logStep('calibrate-model', 'error', { error: errorMsg });
     }
 
-    // Step 7: Generate narratives
-    console.log('Step 7: Generating narratives...');
+    // Step 8: Generate narratives
+    console.log('Step 8: Generating narratives...');
     try {
       const narrativesResponse = await fetch(`${baseUrl}/functions/v1/generate-narratives`, {
         method: 'POST',
@@ -223,8 +250,8 @@ serve(async (req) => {
       await logStep('generate-narratives', 'error', { error: errorMsg });
     }
 
-    // Step 8: Send game alerts for high-value edges
-    console.log('Step 8: Checking for high-value game alerts...');
+    // Step 9: Send game alerts for high-value edges
+    console.log('Step 9: Checking for high-value game alerts...');
     try {
       const { data: highEdgeGames, error: edgeError } = await supabase
         .from('predictions')

@@ -129,28 +129,39 @@ serve(async (req) => {
         .from('odds_snapshots')
         .select('*')
         .eq('game_id', game.id)
+        .eq('market_type', 'h2h')
         .order('snapshot_time', { ascending: false })
-        .limit(1);
+        .limit(5);
 
-      const odds = oddsData?.[0]?.odds_data as any;
       let modelProbHome = homeProbability;
       let impliedProbHome = homeProbability;
       let edgeVsImplied = 0;
 
-      if (odds) {
-        // Extract moneyline odds (American odds format)
-        const homeMoneyline = odds.home || -110;
-        const awayMoneyline = odds.away || -110;
-        
-        // Convert American odds to implied probability
-        if (homeMoneyline < 0) {
-          impliedProbHome = Math.abs(homeMoneyline) / (Math.abs(homeMoneyline) + 100);
-        } else {
-          impliedProbHome = 100 / (homeMoneyline + 100);
+      if (oddsData && oddsData.length > 0) {
+        // Average across multiple bookmakers
+        let sumImpliedProb = 0;
+        let count = 0;
+
+        for (const snapshot of oddsData) {
+          const odds = snapshot.odds_data as any;
+          if (odds && odds.outcomes && Array.isArray(odds.outcomes)) {
+            const homeOutcome = odds.outcomes.find((o: any) => 
+              o.name === game.home_team
+            );
+            
+            if (homeOutcome && homeOutcome.price) {
+              // Convert decimal odds to implied probability (remove vig approximation)
+              const impliedProb = 1 / homeOutcome.price;
+              sumImpliedProb += impliedProb;
+              count++;
+            }
+          }
         }
 
-        // Calculate edge (model probability - implied probability)
-        edgeVsImplied = (modelProbHome - impliedProbHome) * 100; // in percentage points
+        if (count > 0) {
+          impliedProbHome = sumImpliedProb / count;
+          edgeVsImplied = (modelProbHome - impliedProbHome) * 100;
+        }
       }
 
       // Store predictions with upsert

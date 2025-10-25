@@ -2,10 +2,33 @@ import { GameCard } from "./GameCard";
 import { useTodaysGames, useUpcomingGames } from "@/hooks/useGames";
 import { Skeleton } from "./ui/skeleton";
 import { Badge } from "./ui/badge";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export const TodaysGames = () => {
   const { data: games, isLoading: loadingToday } = useTodaysGames();
   const { data: upcomingGames, isLoading: loadingUpcoming } = useUpcomingGames();
+  
+  // Fetch team stats
+  const { data: teamStats } = useQuery({
+    queryKey: ['team-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('team_stats')
+        .select('*')
+        .eq('season', new Date().getFullYear());
+      
+      if (error) throw error;
+      
+      // Create a lookup map
+      const statsMap: Record<string, any> = {};
+      data?.forEach(team => {
+        statsMap[team.team_name] = team;
+      });
+      return statsMap;
+    },
+    refetchInterval: 60000,
+  });
   
   const isLoading = loadingToday || loadingUpcoming;
 
@@ -13,25 +36,31 @@ export const TodaysGames = () => {
     const mlPrediction = game.predictions?.find((p: any) => p.market_type === 'moneyline');
     const spreadPrediction = game.predictions?.find((p: any) => p.market_type === 'spread');
     
+    // Get team stats
+    const homeStats = teamStats?.[game.home_team];
+    const awayStats = teamStats?.[game.away_team];
+    
     // Calculate edge (difference between model prob and implied prob from odds)
-    const features = game.features?.[0]?.feature_set;
-    const modelProb = mlPrediction?.predicted_value || 0.5;
-    const impliedProb = features?.implied_prob_home || 0.5;
-    const edge = Math.abs(modelProb - impliedProb) * 100;
+    const modelProb = mlPrediction?.model_probability || mlPrediction?.predicted_value || 0.5;
+    const impliedProb = mlPrediction?.implied_probability || 0.5;
+    const edge = Math.abs((modelProb - impliedProb) * 100);
 
     return {
       id: game.id,
-      homeTeam: game.home_team,
-      awayTeam: game.away_team,
-      homeProb: Math.round((mlPrediction?.predicted_value || 0.5) * 100),
-      awayProb: Math.round((1 - (mlPrediction?.predicted_value || 0.5)) * 100),
+      homeTeam: `${game.home_team}${homeStats ? ` (${homeStats.wins}-${homeStats.losses}${homeStats.ties ? '-' + homeStats.ties : ''})` : ''}`,
+      awayTeam: `${game.away_team}${awayStats ? ` (${awayStats.wins}-${awayStats.losses}${awayStats.ties ? '-' + awayStats.ties : ''})` : ''}`,
+      homeProb: Math.round(modelProb * 100),
+      awayProb: Math.round((1 - modelProb) * 100),
       spread: spreadPrediction?.predicted_value || 0,
-      spreadProb: mlPrediction?.predicted_value ? Math.round(mlPrediction.predicted_value * 100) : 50,
+      spreadProb: Math.round(modelProb * 100),
       edge: edge,
-      kickoff: new Date(game.kickoff_time).toLocaleTimeString('en-US', { 
-        weekday: 'short', 
+      kickoff: new Date(game.kickoff_time).toLocaleString('en-US', { 
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
         hour: 'numeric', 
-        minute: '2-digit' 
+        minute: '2-digit',
+        timeZoneName: 'short'
       }),
       confidence: (mlPrediction?.confidence || 0) > 0.75 ? 'High' as const : 'Medium' as const,
     };

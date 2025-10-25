@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.ingest-weather]
 verify_jwt = false
 
+[functions.update-team-stats]
+verify_jwt = false
+
 [functions.build-features]
 verify_jwt = false
 
