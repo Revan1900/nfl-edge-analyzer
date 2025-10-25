@@ -153,7 +153,9 @@ export type Database = {
           home_team: string
           id: string
           kickoff_time: string
+          schedule_change: boolean
           season: number
+          start_time_utc: string | null
           status: string | null
           updated_at: string
           venue: string | null
@@ -167,7 +169,9 @@ export type Database = {
           home_team: string
           id: string
           kickoff_time: string
+          schedule_change?: boolean
           season: number
+          start_time_utc?: string | null
           status?: string | null
           updated_at?: string
           venue?: string | null
@@ -181,11 +185,52 @@ export type Database = {
           home_team?: string
           id?: string
           kickoff_time?: string
+          schedule_change?: boolean
           season?: number
+          start_time_utc?: string | null
           status?: string | null
           updated_at?: string
           venue?: string | null
           week?: number
+        }
+        Relationships: []
+      }
+      games_odds_latest: {
+        Row: {
+          game_id: string
+          ml_away: number | null
+          ml_home: number | null
+          over_price: number | null
+          spread: number | null
+          spread_away_price: number | null
+          spread_home_price: number | null
+          total: number | null
+          under_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          game_id: string
+          ml_away?: number | null
+          ml_home?: number | null
+          over_price?: number | null
+          spread?: number | null
+          spread_away_price?: number | null
+          spread_home_price?: number | null
+          total?: number | null
+          under_price?: number | null
+          updated_at: string
+        }
+        Update: {
+          game_id?: string
+          ml_away?: number | null
+          ml_home?: number | null
+          over_price?: number | null
+          spread?: number | null
+          spread_away_price?: number | null
+          spread_home_price?: number | null
+          total?: number | null
+          under_price?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
