@@ -45,7 +45,10 @@ export const Header = () => {
     <header className="bg-gradient-primary text-primary-foreground shadow-elevated sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div 
+            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate('/')}
+          >
             <Trophy className="h-8 w-8" />
             <div>
               <h1 className="text-2xl font-bold tracking-tight">NFL Analytics Pro</h1>
@@ -66,8 +69,8 @@ export const Header = () => {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/account')}>
-                    Account Settings
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                    Games Dashboard
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/selections')}>
                     My Selections
@@ -79,9 +82,9 @@ export const Header = () => {
                         <Shield className="mr-2 h-4 w-4" />
                         Admin Panel
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <DropdownMenuItem onClick={() => navigate('/observability')}>
                         <Activity className="mr-2 h-4 w-4" />
-                        Dashboard
+                        Observability
                       </DropdownMenuItem>
                     </>
                   )}

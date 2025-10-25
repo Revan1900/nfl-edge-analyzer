@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, TrendingUp, Cloud, Activity, AlertCircle } from 'lucide-react';
+import { AIInsights } from '@/components/AIInsights';
 
 const GameDetail = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -101,6 +102,7 @@ const GameDetail = () => {
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="insights">AI Insights</TabsTrigger>
             <TabsTrigger value="odds">Odds & Markets</TabsTrigger>
             <TabsTrigger value="factors">Key Factors</TabsTrigger>
             <TabsTrigger value="injuries">Injuries</TabsTrigger>
@@ -213,6 +215,14 @@ const GameDetail = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="insights">
+            <AIInsights 
+              gameId={game.id} 
+              homeTeam={game.home_team} 
+              awayTeam={game.away_team} 
+            />
           </TabsContent>
 
           <TabsContent value="odds">

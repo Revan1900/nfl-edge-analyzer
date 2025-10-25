@@ -51,7 +51,7 @@ const Register = () => {
     } else {
       toast({
         title: 'Registration successful',
-        description: 'Please check your email to verify your account.',
+        description: 'Account created! You can now sign in.',
       });
       navigate('/login');
     }
@@ -62,7 +62,7 @@ const Register = () => {
       <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-lg border">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-foreground">Create Account</h1>
-          <p className="text-muted-foreground mt-2">Join AI Odds Analytics</p>
+          <p className="text-muted-foreground mt-2">Join NFL Analytics Pro</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

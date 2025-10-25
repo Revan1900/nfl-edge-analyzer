@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { CookieConsent } from "./components/CookieConsent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Home from "./pages/Home";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -19,6 +20,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
+import GamesDashboard from "./pages/GamesDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,9 +35,10 @@ const App = () => (
           <AuthProvider>
             <CookieConsent />
             <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/games" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/" element={<Index />} />
             <Route path="/game/:gameId" element={<GameDetail />} />
             <Route path="/historical" element={<Historical />} />
             <Route path="/about" element={<About />} />
@@ -63,7 +66,22 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <GamesDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/observability" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
