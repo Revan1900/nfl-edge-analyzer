@@ -44,16 +44,16 @@ serve(async (req) => {
 
       const fs = feature.feature_set;
       
-      // Moneyline prediction using logistic regression (simplified)
-      const homeAdvantage = 0.55; // Home field advantage
-      const spreadAdjustment = fs.consensus_spread / 14; // Normalize spread
-      const injuryAdjustment = (fs.injury_impact_away - fs.injury_impact_home) * 0.1;
-      const weatherAdjustment = fs.weather_severity * -0.05;
-
-      let homeProbability = homeAdvantage + spreadAdjustment + injuryAdjustment + weatherAdjustment;
+      // Use implied probability from odds as primary signal
+      let homeProbability = fs.implied_prob_home || 0.5;
       
-      // Blend with implied probabilities (soft covariate)
-      homeProbability = (homeProbability * 0.6) + (fs.implied_prob_home * 0.4);
+      // Apply adjustments based on our analysis
+      const spreadAdjustment = fs.consensus_spread / 28; // Normalize to probability shift
+      const injuryAdjustment = (fs.injury_impact_away - fs.injury_impact_home) * 0.05;
+      const weatherAdjustment = fs.weather_severity * -0.02;
+      
+      // Apply adjustments (smaller weight to keep close to market)
+      homeProbability = homeProbability + (spreadAdjustment * 0.3) + injuryAdjustment + weatherAdjustment;
       
       // Clamp between 0.02 and 0.98
       homeProbability = Math.max(0.02, Math.min(0.98, homeProbability));
@@ -71,8 +71,8 @@ serve(async (req) => {
         upper: Math.min(1, homeProbability + (0.1 * (1 - confidence))),
       };
 
-      // Spread prediction (margin of victory)
-      const predictedMargin = (homeProbability - 0.5) * 28; // Scale to ±14 points
+      // Use consensus spread from market as base
+      const predictedMargin = fs.consensus_spread;
       
       // Total prediction
       const baseTotal = fs.consensus_total;
@@ -124,45 +124,10 @@ serve(async (req) => {
         },
       ];
 
-      // Fetch odds for this game to calculate implied probabilities and edge
-      const { data: oddsData } = await supabase
-        .from('odds_snapshots')
-        .select('*')
-        .eq('game_id', game.id)
-        .eq('market_type', 'h2h')
-        .order('snapshot_time', { ascending: false })
-        .limit(5);
-
-      let modelProbHome = homeProbability;
-      let impliedProbHome = homeProbability;
-      let edgeVsImplied = 0;
-
-      if (oddsData && oddsData.length > 0) {
-        // Average across multiple bookmakers
-        let sumImpliedProb = 0;
-        let count = 0;
-
-        for (const snapshot of oddsData) {
-          const odds = snapshot.odds_data as any;
-          if (odds && odds.outcomes && Array.isArray(odds.outcomes)) {
-            const homeOutcome = odds.outcomes.find((o: any) => 
-              o.name === game.home_team
-            );
-            
-            if (homeOutcome && homeOutcome.price) {
-              // Convert decimal odds to implied probability (remove vig approximation)
-              const impliedProb = 1 / homeOutcome.price;
-              sumImpliedProb += impliedProb;
-              count++;
-            }
-          }
-        }
-
-        if (count > 0) {
-          impliedProbHome = sumImpliedProb / count;
-          edgeVsImplied = (modelProbHome - impliedProbHome) * 100;
-        }
-      }
+      // Use the implied probability already calculated in features
+      const modelProbHome = homeProbability;
+      const impliedProbHome = fs.implied_prob_home || 0.5;
+      const edgeVsImplied = (modelProbHome - impliedProbHome) * 100;
 
       // Store predictions with upsert
       const enhancedPredictions = [

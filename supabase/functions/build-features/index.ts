@@ -153,13 +153,27 @@ function calculateConsensusOdds(odds: any[]) {
     ? totals.reduce((a: number, b: number) => a + b, 0) / totals.length 
     : 47;
 
-  // Calculate implied probabilities from moneyline
-  const mlOdds = odds
-    .filter(o => o.market_type === 'h2h')
-    .flatMap(o => o.odds_data?.outcomes || []);
-
-  const homeOdds = mlOdds.filter((o: any) => o.name?.includes('home'))?.[0]?.price || 2.0;
-  const awayOdds = mlOdds.filter((o: any) => o.name?.includes('away'))?.[0]?.price || 2.0;
+  // Calculate implied probabilities from moneyline using actual team names
+  const mlSnapshots = odds.filter(o => o.market_type === 'h2h');
+  
+  let homeOddsSum = 0;
+  let awayOddsSum = 0;
+  let count = 0;
+  
+  for (const snapshot of mlSnapshots) {
+    const outcomes = snapshot.odds_data?.outcomes || [];
+    const homeOutcome = outcomes.find((o: any) => o.name === game.home_team);
+    const awayOutcome = outcomes.find((o: any) => o.name === game.away_team);
+    
+    if (homeOutcome?.price && awayOutcome?.price) {
+      homeOddsSum += homeOutcome.price;
+      awayOddsSum += awayOutcome.price;
+      count++;
+    }
+  }
+  
+  const homeOdds = count > 0 ? homeOddsSum / count : 2.0;
+  const awayOdds = count > 0 ? awayOddsSum / count : 2.0;
 
   const impliedHome = 1 / homeOdds;
   const impliedAway = 1 / awayOdds;
