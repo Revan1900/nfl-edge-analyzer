@@ -42,21 +42,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('auth-login', {
-        body: { email, password }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
       if (error) {
         return { error: error.message };
-      }
-
-      if (data.error) {
-        return { error: data.error };
-      }
-
-      // Set the session from the response
-      if (data.session) {
-        await supabase.auth.setSession(data.session);
       }
 
       return { error: null };
@@ -67,16 +59,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('auth-register', {
-        body: { email, password }
+      const redirectUrl = `${window.location.origin}/`;
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
       });
 
       if (error) {
         return { error: error.message };
-      }
-
-      if (data.error) {
-        return { error: data.error };
       }
 
       return { error: null };
