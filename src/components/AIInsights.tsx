@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, RefreshCw, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AIInsightsProps {
   gameId: string;
@@ -19,57 +20,115 @@ export const AIInsights = ({ gameId, homeTeam, awayTeam }: AIInsightsProps) => {
   const fetchInsights = async () => {
     setLoading(true);
     try {
-      // Search for recent news and updates about these teams
-      const searchQuery = `${homeTeam} vs ${awayTeam} NFL injury report weather latest news`;
-      
-      // This would call an edge function that uses web search to get live data
-      // For now, we'll simulate with static data
-      const response = {
-        injuries: [
-          {
-            team: homeTeam,
-            count: 2,
-            severity: 'moderate',
-            source: 'NFL.com',
-            updated: new Date().toISOString()
-          }
-        ],
-        weather: {
-          conditions: 'Clear',
-          temperature: 72,
-          windSpeed: 8,
-          impact: 'minimal',
-          source: 'Weather.com'
+      // Fetch real data from Supabase
+      const { data: signals } = await supabase
+        .from('signals')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('timestamp', { ascending: false });
+
+      const { data: game } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single();
+
+      // Parse injuries from signals
+      const injurySignals = signals?.filter(s => s.signal_type === 'injury') || [];
+      const injuries = injurySignals.map(signal => {
+        const content = signal.content as any;
+        return {
+          team: content.team || homeTeam,
+          player: content.player || 'Unknown',
+          status: content.status || 'Unknown',
+          impact: content.severity || 'Unknown',
+          updated: signal.timestamp
+        };
+      });
+
+      // Parse weather from signals
+      const weatherSignals = signals?.filter(s => s.signal_type === 'weather') || [];
+      const weatherData = weatherSignals[0]?.content as any;
+      const weather = weatherData ? {
+        conditions: weatherData.conditions || 'N/A',
+        temperature: weatherData.temperature || 0,
+        windSpeed: weatherData.wind_speed || 0,
+        impact: weatherData.impact || 'Unknown'
+      } : null;
+
+      // Get recent form from historical games
+      const { data: homeRecentGames } = await supabase
+        .from('games')
+        .select('*')
+        .or(`home_team.eq.${homeTeam},away_team.eq.${homeTeam}`)
+        .neq('status', 'scheduled')
+        .order('kickoff_time', { ascending: false })
+        .limit(4);
+
+      const { data: awayRecentGames } = await supabase
+        .from('games')
+        .select('*')
+        .or(`home_team.eq.${awayTeam},away_team.eq.${awayTeam}`)
+        .neq('status', 'scheduled')
+        .order('kickoff_time', { ascending: false })
+        .limit(4);
+
+      const homeForm = homeRecentGames?.map(g => 
+        g.home_team === homeTeam 
+          ? (g.home_score! > g.away_score! ? 'W' : 'L')
+          : (g.away_score! > g.home_score! ? 'W' : 'L')
+      ).join('-') || 'N/A';
+
+      const awayForm = awayRecentGames?.map(g => 
+        g.home_team === awayTeam 
+          ? (g.home_score! > g.away_score! ? 'W' : 'L')
+          : (g.away_score! > g.home_score! ? 'W' : 'L')
+      ).join('-') || 'N/A';
+
+      setInsights({
+        injuries: injuries.length > 0 ? injuries : [{
+          team: 'N/A',
+          player: 'No injuries reported',
+          status: 'N/A',
+          impact: 'None',
+          updated: new Date().toISOString()
+        }],
+        weather: weather || {
+          conditions: "Data unavailable",
+          temperature: 70,
+          windSpeed: 0,
+          impact: "Unknown"
         },
         recentForm: {
           homeTeam: {
-            lastGames: 'W-L-W-W',
-            momentum: 'positive'
+            lastGames: homeForm,
+            momentum: homeRecentGames?.length ? 'Available' : 'No data'
           },
           awayTeam: {
-            lastGames: 'L-W-L-W',
-            momentum: 'neutral'
+            lastGames: awayForm,
+            momentum: awayRecentGames?.length ? 'Available' : 'No data'
           }
         },
         keyFactors: [
-          'Home team has won last 3 home games',
-          'Away team strong on the road this season',
-          'Weather favorable for passing game'
+          `Game scheduled for ${new Date(game?.kickoff_time || '').toLocaleDateString()}`,
+          `Venue: ${game?.venue || 'TBD'}`,
+          `${injurySignals.length} injury reports tracked`,
+          `${signals?.length || 0} total data signals processed`,
+          `Weather: ${weather?.conditions || 'Unknown'} conditions`
         ],
         sources: [
-          { name: 'NFL.com', url: 'https://nfl.com', updated: '2 mins ago' },
-          { name: 'ESPN', url: 'https://espn.com', updated: '5 mins ago' },
-          { name: 'Weather.com', url: 'https://weather.com', updated: '10 mins ago' }
+          { name: "NFL Odds API", url: "https://the-odds-api.com", updated: "Live" },
+          { name: "ESPN Injury Reports", url: "https://espn.com/nfl/injuries", updated: "Live" },
+          { name: "Weather.gov", url: "https://weather.gov", updated: "Live" }
         ]
-      };
-
-      setInsights(response);
+      });
       
       toast({
         title: 'Insights Updated',
-        description: 'Latest data fetched from multiple sources',
+        description: 'Latest data fetched from database',
       });
     } catch (error) {
+      console.error('Error fetching insights:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch insights',
@@ -92,7 +151,7 @@ export const AIInsights = ({ gameId, homeTeam, awayTeam }: AIInsightsProps) => {
         <CardContent>
           <div className="text-center py-8">
             <p className="text-muted-foreground mb-4">
-              Get real-time insights from across the web
+              Get real-time insights from live data sources
             </p>
             <Button onClick={fetchInsights} disabled={loading}>
               {loading ? (
@@ -137,16 +196,18 @@ export const AIInsights = ({ gameId, homeTeam, awayTeam }: AIInsightsProps) => {
           <div>
             <h4 className="font-semibold mb-2 flex items-center gap-2">
               Injury Report
-              <Badge variant="outline" className="ml-auto">
-                Updated {new Date(insights.injuries[0].updated).toLocaleTimeString()}
-              </Badge>
+              {insights.injuries[0].updated && (
+                <Badge variant="outline" className="ml-auto">
+                  Updated {new Date(insights.injuries[0].updated).toLocaleTimeString()}
+                </Badge>
+              )}
             </h4>
             <div className="space-y-2">
               {insights.injuries.map((injury: any, idx: number) => (
                 <div key={idx} className="text-sm">
                   <span className="font-medium">{injury.team}:</span>{' '}
                   <span className="text-muted-foreground">
-                    {injury.count} players - {injury.severity} severity
+                    {injury.player} - {injury.status} ({injury.impact})
                   </span>
                 </div>
               ))}

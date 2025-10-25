@@ -124,9 +124,86 @@ serve(async (req) => {
         },
       ];
 
+      // Fetch odds for this game to calculate implied probabilities and edge
+      const { data: oddsData } = await supabase
+        .from('odds_snapshots')
+        .select('*')
+        .eq('game_id', game.id)
+        .order('snapshot_time', { ascending: false })
+        .limit(1);
+
+      const odds = oddsData?.[0]?.odds_data as any;
+      let modelProbHome = homeProbability;
+      let impliedProbHome = homeProbability;
+      let edgeVsImplied = 0;
+
+      if (odds) {
+        // Extract moneyline odds (American odds format)
+        const homeMoneyline = odds.home || -110;
+        const awayMoneyline = odds.away || -110;
+        
+        // Convert American odds to implied probability
+        if (homeMoneyline < 0) {
+          impliedProbHome = Math.abs(homeMoneyline) / (Math.abs(homeMoneyline) + 100);
+        } else {
+          impliedProbHome = 100 / (homeMoneyline + 100);
+        }
+
+        // Calculate edge (model probability - implied probability)
+        edgeVsImplied = (modelProbHome - impliedProbHome) * 100; // in percentage points
+      }
+
+      // Store predictions with upsert
+      const enhancedPredictions = [
+        {
+          game_id: game.id,
+          market_type: 'moneyline',
+          predicted_value: homeProbability,
+          confidence,
+          uncertainty_band: uncertaintyBand,
+          model_version: '2.0.0',
+          provenance_hash: provenanceHash,
+          model_probability: modelProbHome,
+          implied_probability: impliedProbHome,
+          edge_vs_implied: edgeVsImplied,
+        },
+        {
+          game_id: game.id,
+          market_type: 'spread',
+          predicted_value: predictedMargin,
+          confidence,
+          uncertainty_band: {
+            lower: predictedMargin - 7,
+            upper: predictedMargin + 7,
+          },
+          model_version: '2.0.0',
+          provenance_hash: provenanceHash,
+          model_probability: homeProbability,
+          implied_probability: impliedProbHome,
+          edge_vs_implied: edgeVsImplied,
+        },
+        {
+          game_id: game.id,
+          market_type: 'total',
+          predicted_value: predictedTotal,
+          confidence,
+          uncertainty_band: {
+            lower: predictedTotal - 6,
+            upper: predictedTotal + 6,
+          },
+          model_version: '2.0.0',
+          provenance_hash: provenanceHash,
+          model_probability: null,
+          implied_probability: null,
+          edge_vs_implied: null,
+        },
+      ];
+
       const { error: predError } = await supabase
         .from('predictions')
-        .insert(predictions);
+        .upsert(enhancedPredictions, { 
+          onConflict: 'game_id,market_type'
+        });
 
       if (predError) {
         console.error(`Error storing predictions for ${game.id}:`, predError);
