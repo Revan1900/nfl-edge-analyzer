@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Shield, Database, Users, ExternalLink } from 'lucide-react';
+import { AdminForceRefreshButton } from '@/components/AdminForceRefreshButton';
 
 interface Source {
   id: string;
@@ -223,9 +224,12 @@ export default function Admin() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="flex items-center gap-3 mb-6">
-        <Shield className="w-8 h-8" />
-        <h1 className="text-3xl font-bold">Admin Panel</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Shield className="w-8 h-8" />
+          <h1 className="text-3xl font-bold">Admin Panel</h1>
+        </div>
+        <AdminForceRefreshButton />
       </div>
 
       <Tabs defaultValue="sources" className="space-y-6">

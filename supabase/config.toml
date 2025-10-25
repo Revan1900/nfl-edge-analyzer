@@ -1,5 +1,8 @@
 project_id = "erqbocersgeghtjadkvw"
 
+[functions.trigger-refresh]
+verify_jwt = false
+
 [functions.ingest-odds]
 verify_jwt = false
 
