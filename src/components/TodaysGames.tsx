@@ -1,9 +1,13 @@
 import { GameCard } from "./GameCard";
-import { useTodaysGames } from "@/hooks/useGames";
+import { useTodaysGames, useUpcomingGames } from "@/hooks/useGames";
 import { Skeleton } from "./ui/skeleton";
+import { Badge } from "./ui/badge";
 
 export const TodaysGames = () => {
-  const { data: games, isLoading } = useTodaysGames();
+  const { data: games, isLoading: loadingToday } = useTodaysGames();
+  const { data: upcomingGames, isLoading: loadingUpcoming } = useUpcomingGames();
+  
+  const isLoading = loadingToday || loadingUpcoming;
 
   const formatGameForCard = (game: any) => {
     const mlPrediction = game.predictions?.find((p: any) => p.market_type === 'moneyline');
@@ -40,11 +44,29 @@ export const TodaysGames = () => {
     day: 'numeric' 
   });
 
+  // Group upcoming games by week
+  const groupGamesByWeek = (gamesList: any[]) => {
+    const grouped: Record<number, any[]> = {};
+    gamesList.forEach((game) => {
+      if (!grouped[game.week]) {
+        grouped[game.week] = [];
+      }
+      grouped[game.week].push(game);
+    });
+    return grouped;
+  };
+
+  const hasGamesToday = games && games.length > 0;
+  const showUpcoming = !hasGamesToday && upcomingGames && upcomingGames.length > 0;
+  const groupedUpcoming = showUpcoming ? groupGamesByWeek(upcomingGames) : {};
+
   return (
     <section className="container mx-auto px-4 py-12">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-foreground mb-2">Today's Games</h2>
+          <h2 className="text-3xl font-bold text-foreground mb-2">
+            {hasGamesToday ? "Today's Games" : "Upcoming Games"}
+          </h2>
           <p className="text-muted-foreground">{today}</p>
         </div>
         <div className="flex gap-2">
@@ -63,15 +85,31 @@ export const TodaysGames = () => {
             <Skeleton key={i} className="h-64 w-full" />
           ))}
         </div>
-      ) : games && games.length > 0 ? (
+      ) : hasGamesToday ? (
         <div className="grid md:grid-cols-2 gap-6">
           {games.map((game) => (
             <GameCard key={game.id} {...formatGameForCard(game)} />
           ))}
         </div>
+      ) : showUpcoming ? (
+        <div className="space-y-8">
+          {Object.entries(groupedUpcoming).map(([week, weekGames]) => (
+            <div key={week}>
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="text-xl font-semibold text-foreground">Week {week}</h3>
+                <Badge variant="outline">{weekGames.length} games</Badge>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                {weekGames.map((game) => (
+                  <GameCard key={game.id} {...formatGameForCard(game)} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-muted-foreground text-lg">No games scheduled for today</p>
+          <p className="text-muted-foreground text-lg">No games scheduled</p>
           <p className="text-sm text-muted-foreground mt-2">Check back later for upcoming games</p>
         </div>
       )}

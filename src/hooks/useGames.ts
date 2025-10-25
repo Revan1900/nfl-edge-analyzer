@@ -54,8 +54,8 @@ export const useTodaysGames = () => {
     queryKey: ['games', 'today'],
     queryFn: async () => {
       const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      const next48Hours = new Date(today);
+      next48Hours.setDate(next48Hours.getDate() + 2);
 
       const { data, error } = await supabase
         .from('games')
@@ -66,13 +66,40 @@ export const useTodaysGames = () => {
           signals(*)
         `)
         .gte('kickoff_time', today.toISOString())
-        .lte('kickoff_time', tomorrow.toISOString())
-        .order('kickoff_time');
+        .lte('kickoff_time', next48Hours.toISOString())
+        .order('kickoff_time', { ascending: true });
 
       if (error) throw error;
       return data as GameWithData[];
     },
     refetchInterval: 30000, // Refetch every 30 seconds
+  });
+};
+
+export const useUpcomingGames = () => {
+  return useQuery({
+    queryKey: ['games', 'upcoming'],
+    queryFn: async () => {
+      const today = new Date();
+      const next21Days = new Date(today);
+      next21Days.setDate(next21Days.getDate() + 21);
+
+      const { data, error } = await supabase
+        .from('games')
+        .select(`
+          *,
+          predictions(*),
+          odds_snapshots(*),
+          signals(*)
+        `)
+        .gte('kickoff_time', today.toISOString())
+        .lte('kickoff_time', next21Days.toISOString())
+        .order('kickoff_time', { ascending: true });
+
+      if (error) throw error;
+      return data as GameWithData[];
+    },
+    refetchInterval: 30000,
   });
 };
 
